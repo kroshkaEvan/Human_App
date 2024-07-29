@@ -27,7 +27,7 @@ final class PhotoViewController: UIViewController {
     }
     
     private lazy var imageView: UIImageView = {
-        let imageView = UIImageView(image: UIImage())
+        let imageView = UIImageView(image: viewModel.image)
         imageView.contentMode = .scaleAspectFit
         imageView.backgroundColor = .white
         imageView.translatesAutoresizingMaskIntoConstraints = false
@@ -38,7 +38,7 @@ final class PhotoViewController: UIViewController {
         let button = UIButton(type: .system)
         button.setTitle("Select photo", for: .normal)
         button.translatesAutoresizingMaskIntoConstraints = false
-        button.addTarget(self, 
+        button.addTarget(self,
                          action: #selector(selectPhotoTapped),
                          for: .touchUpInside)
         return button
@@ -48,10 +48,28 @@ final class PhotoViewController: UIViewController {
         let button = UIButton(type: .system)
         button.setTitle("Save photo", for: .normal)
         button.translatesAutoresizingMaskIntoConstraints = false
-        button.addTarget(self, 
+        button.addTarget(self,
                          action: #selector(downloadVisiblePortion),
                          for: .touchUpInside)
         return button
+    }()
+    
+    private lazy var segmentedControl: UISegmentedControl = {
+        let segmentedControl = UISegmentedControl()
+        segmentedControl.backgroundColor = .lightGray
+        segmentedControl.selectedSegmentTintColor = .yellow
+        segmentedControl.insertSegment(withTitle: Constants.Strings.colour,
+                                       at: 0,
+                                       animated: true)
+        segmentedControl.insertSegment(withTitle: Constants.Strings.dark,
+                                       at: 1,
+                                       animated: true)
+        segmentedControl.selectedSegmentIndex = 0
+        segmentedControl.addTarget(self,
+                                   action: #selector(segmentedControlChanged),
+                                   for: .valueChanged)
+        segmentedControl.translatesAutoresizingMaskIntoConstraints = false
+        return segmentedControl
     }()
     
     init(viewModel: any MainViewModelProtocol) {
@@ -69,8 +87,11 @@ final class PhotoViewController: UIViewController {
         setupMetalView()
         setupLayout()
         applyBlurToBackground()
-        setupMetalPipeline()
         configureMetal()
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
     }
     
     override func viewDidLayoutSubviews() {
@@ -84,8 +105,9 @@ final class PhotoViewController: UIViewController {
 extension PhotoViewController {
     
     private func setupLayout() {
-        view.backgroundColor = .white
-        [imageView, selectPhotoButton, savePhotoButton].forEach { view.addSubview($0) }
+        view.backgroundColor = .darkGray
+        [imageView, segmentedControl,
+         selectPhotoButton, savePhotoButton].forEach { view.addSubview($0) }
         
         if let metalView = metalView {
             view.addSubview(metalView)
@@ -105,7 +127,12 @@ extension PhotoViewController {
             
             savePhotoButton.topAnchor.constraint(equalTo: safeArea.topAnchor, constant: 0),
             savePhotoButton.leadingAnchor.constraint(equalTo: safeArea.centerXAnchor, constant: 10),
-            savePhotoButton.heightAnchor.constraint(equalToConstant: 50)
+            savePhotoButton.heightAnchor.constraint(equalToConstant: 50),
+            
+            segmentedControl.bottomAnchor.constraint(equalTo: safeArea.bottomAnchor, constant: -10),
+            segmentedControl.leadingAnchor.constraint(equalTo: safeArea.leadingAnchor, constant: 50),
+            segmentedControl.trailingAnchor.constraint(equalTo: safeArea.trailingAnchor, constant: -50),
+            segmentedControl.heightAnchor.constraint(equalToConstant: 50)
         ])
         
         if let metalView = metalView {
@@ -133,7 +160,7 @@ extension PhotoViewController {
         ciContext = CIContext(mtlDevice: metalDevice)
     }
     
-    func getCropImage() -> UIImage? {
+    private func getCropImage() -> UIImage? {
         guard let metalView = metalView else {
             return nil
         }
@@ -153,7 +180,7 @@ extension PhotoViewController {
 
         UIGraphicsBeginImageContextWithOptions(cropSize, false, UIScreen.main.scale)
         guard let context = UIGraphicsGetCurrentContext() else { return nil }
-        context.translateBy(x: -cropRect.origin.x, 
+        context.translateBy(x: -cropRect.origin.x,
                             y: -cropRect.origin.y)
         window.layer.render(in: context)
         let image = UIGraphicsGetImageFromCurrentImageContext()
@@ -182,7 +209,8 @@ extension PhotoViewController {
     private func applyBlurToBackground() {
         let blurEffect = UIBlurEffect(style: .light)
         let blurEffectView = UIVisualEffectView(effect: blurEffect)
-        blurEffectView.frame = view.bounds
+        
+        blurEffectView.frame = view.frame
         blurEffectView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         
         let maskLayer = CAShapeLayer()
@@ -219,19 +247,32 @@ extension PhotoViewController {
 // MARK: - Obj-c methods
 
 extension PhotoViewController {
-    @objc private func handlePinchGesture(_ gesture: UIPinchGestureRecognizer) {
-        guard gesture.view != nil else { return }
-        
-        if gesture.state == .began || gesture.state == .changed {
-            gesture.view?.transform = (gesture.view?.transform.scaledBy(x: gesture.scale, y: gesture.scale))!
-            gesture.scale = 1.0
+    
+    @objc private func segmentedControlChanged() {
+        switch segmentedControl.selectedSegmentIndex {
+        case 0:
+            let originalImage = viewModel.image
+            imageView.image = originalImage
+            currentCIImage = CIImage(image: originalImage)
+        case 1:
+            setupMetalPipeline()
+            if let image = imageView.image {
+                applyGrayscaleEffect(to: image)
+            }
+        default:
+            break
         }
     }
     
+    @objc private func handlePinchGesture(_ gesture: UIPinchGestureRecognizer) {
+        if let gestureView = gesture.view, gesture.state == .began || gesture.state == .changed {
+            gestureView.transform = gestureView.transform.scaledBy(x: gesture.scale, y: gesture.scale)
+            gesture.scale = 1.0
+        }
+    }
+
     @objc private func handleRotationGesture(_ gesture: UIRotationGestureRecognizer) {
-        guard let gestureView = gesture.view else { return }
-        
-        if gesture.state == .began || gesture.state == .changed {
+        if let gestureView = gesture.view, gesture.state == .began || gesture.state == .changed {
             gestureView.transform = gestureView.transform.rotated(by: gesture.rotation)
             gesture.rotation = 0
         }
@@ -311,20 +352,20 @@ extension PhotoViewController {
         let textureLoader = MTKTextureLoader(device: metalDevice)
         
         do {
-            let texture = try textureLoader.newTexture(cgImage: cgImage, 
+            let texture = try textureLoader.newTexture(cgImage: cgImage,
                                                        options: nil)
             let commandBuffer = metalCommandQueue.makeCommandBuffer()
             let commandEncoder = commandBuffer?.makeComputeCommandEncoder()
             commandEncoder?.setComputePipelineState(metalPipelineState!)
             commandEncoder?.setTexture(texture, index: 0)
 
-            let outputTexture = makeTexture(size: CGSize(width: cgImage.width, 
+            let outputTexture = makeTexture(size: CGSize(width: cgImage.width,
                                                          height: cgImage.height),
                                             device: metalDevice)
-            commandEncoder?.setTexture(outputTexture, 
+            commandEncoder?.setTexture(outputTexture,
                                        index: 1)
 
-            let threadGroupCount = MTLSize(width: 8, 
+            let threadGroupCount = MTLSize(width: 8,
                                            height: 8,
                                            depth: 1)
             let threadGroups = MTLSize(width: (cgImage.width + 7) / 8,
@@ -353,9 +394,8 @@ extension PhotoViewController {
     }
         
     private func updateImageView(with texture: MTLTexture) {
-        var data = [UInt8](repeating: 0, 
+        var data = [UInt8](repeating: 0,
                            count: texture.width * texture.height * 4)
-        
         texture.getBytes(&data,
                          bytesPerRow: texture.width * 4,
                          from: MTLRegionMake2D(0, 0,
@@ -363,22 +403,21 @@ extension PhotoViewController {
                                                texture.height),
                          mipmapLevel: 0)
         
-        let provider = CGDataProvider(data: Data(data) as CFData)
-        
-        guard let cgImg = CGImage(width: texture.width,
-                            height: texture.height,
-                            bitsPerComponent: 8,
-                            bitsPerPixel: 32, 
-                            bytesPerRow: texture.width * 4,
-                            space: CGColorSpaceCreateDeviceRGB(), 
-                            bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipLast.rawValue),
-                            provider: provider!,
-                            decode: nil,
-                            shouldInterpolate: false,
-                                  intent: .defaultIntent) else {return}
-        
-        DispatchQueue.main.async {
-            self.imageView.image = UIImage(cgImage: cgImg)
+        if let provider = CGDataProvider(data: Data(data) as CFData),
+           let cgImg = CGImage(width: texture.width,
+                               height: texture.height,
+                               bitsPerComponent: 8,
+                               bitsPerPixel: 32,
+                               bytesPerRow: texture.width * 4,
+                               space: CGColorSpaceCreateDeviceRGB(),
+                               bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipLast.rawValue),
+                               provider: provider,
+                               decode: nil,
+                               shouldInterpolate: false,
+                               intent: .defaultIntent) {
+            DispatchQueue.main.async {
+                self.imageView.image = UIImage(cgImage: cgImg)
+            }
         }
     }
 }
@@ -390,7 +429,9 @@ extension PhotoViewController: UIImagePickerControllerDelegate, UINavigationCont
         if let image = info[.originalImage] as? UIImage {
             imageView.image = image
             viewModel.image = image
-            applyGrayscaleEffect(to: imageView.image ?? image)
+            if segmentedControl.selectedSegmentIndex == 1 {
+                applyGrayscaleEffect(to: imageView.image ?? image)
+            }
             currentCIImage = CIImage(image: image)
         }
         picker.dismiss(animated: true)

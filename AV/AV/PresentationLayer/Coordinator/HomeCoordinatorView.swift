@@ -25,13 +25,15 @@ struct HomeCoordinatorView: View {
                     TabView(selection: $coordinator.tab) {
                         if let mainCoordinator = coordinator.mainCoordinator {
                             MainTabCoordinatorView(coordinator: mainCoordinator)
-                                .tabItem { Text("Main") }
+                                .tabItem { Label(Constants.Strings.main,
+                                                 systemImage: "house") }
                                 .tag(HomeTab.main)
                         }
                         
                         if let settingsCoordinator = coordinator.settingsCoordinator {
                             SettingsTabCoordinatorView(coordinator: settingsCoordinator)
-                                .tabItem { Text("Settings") }
+                                .tabItem { Label(Constants.Strings.settings,
+                                                 systemImage: "gear") }
                                 .tag(HomeTab.settings)
                         }
                     }

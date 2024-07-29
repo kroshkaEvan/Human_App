@@ -9,7 +9,7 @@ import SwiftUI
 
 struct SettingsTabCoordinatorView: View {
     @ObservedObject var coordinator: SettingsTabCoordinator
-            
+    
     var body: some View {
         if let viewModel = coordinator.viewModel {
             SettingsView(viewModel: viewModel)

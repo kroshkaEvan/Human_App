@@ -10,24 +10,39 @@ import SwiftUI
 struct PresentationView<ViewModel>: View where ViewModel: PresentationViewModelProtocol {
     
     @StateObject private var viewModel: ViewModel
+    
+    private let webView = AppWebView()
 
     init(viewModel: @autoclosure @escaping () -> ViewModel) {
       self._viewModel = StateObject(wrappedValue: viewModel())
     }
     
     var body: some View {
-        VStack {
-            Text("Presentation View")
-
-            HStack {
-                Button {
-                    viewModel.unlock()
-                } label: {
-                    Text("Enter")
-                }
+        contentView
+            .eraseToAnyView()
+            .onViewDidLoad {
+                webView.loadURL(urlString: Constants.Strings.testPDF)
             }
+    }
+    
+    var contentView: some View {
+        VStack {
+            Spacer()
+            
+            Text("HumanApps")
+            
+            Text("Ivan Tsvetkov")
+            
+            webView
+            
+            Button {
+                viewModel.unlock()
+            } label: {
+                Text("Open task")
+            }
+            
+            Spacer()
         }
-        .edgesIgnoringSafeArea(.all)
     }
 }
 

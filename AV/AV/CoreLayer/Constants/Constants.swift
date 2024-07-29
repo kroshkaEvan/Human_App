@@ -15,7 +15,13 @@ enum Constants {
     
     enum Title { }
     
-    enum PlaceHolder { }
+    enum Strings {
+        static let main = "Main"
+        static let settings = "Settings"
+        static let testPDF = "TestTask"
+        static let colour = "Colour"
+        static let dark = "Black/White"
+    }
     
     enum PreviewMock {
         static let homeCoordinator = HomeCoordinator(parent: MainCoordinator())

@@ -23,7 +23,7 @@ final class MainViewModel: AppDefaultViewModel, MainViewModelProtocol {
     
     // MARK: - Publishers
 
-    @Published var image: UIImage = UIImage()
+    @Published var image: UIImage = UIImage(named: "bird") ?? UIImage()
         
     // MARK: Stored Properties
         

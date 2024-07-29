@@ -8,11 +8,26 @@
 import SwiftUI
 import Combine
 
+enum SettingsLoad {
+    case onAddItem(String)
+}
+
 protocol SettingsViewModelProtocol: ObservableObject, Identifiable {
-    
+    var items: [String] {get set}
+    var showAlert: Bool {get set}
+    var showAddItemAlert: Bool {get set}
+    var selectedItem: String {get set}
+    func apply(_ input: SettingsLoad)
 }
 
 final class SettingsViewModel: AppDefaultViewModel, SettingsViewModelProtocol {
+    
+    // MARK: - Publishers
+
+    @Published var items: [String] = ["About app"]
+    @Published var showAlert = false
+    @Published var showAddItemAlert = false
+    @Published var selectedItem: String = ""
     
     // MARK: Stored Properties
         
@@ -34,15 +49,16 @@ extension SettingsViewModel {
 // MARK: DataFlowProtocol
 
 extension SettingsViewModel: DataFlowProtocol {
-    typealias InputType = Load
+    typealias InputType = SettingsLoad
 
-    enum Load {
-        case onAppear
-    }
-
-    func apply(_ input: Load) {
+    func apply(_ input: SettingsLoad) {
         switch input {
-        case .onAppear: break
+        case .onAddItem(let item): addItem(item)
         }
+    }
+    
+    private func addItem(_ item: String) {
+        showAddItemAlert = true
+        items.append(item)
     }
 }
