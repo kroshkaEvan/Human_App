@@ -28,8 +28,8 @@ final class PhotoViewController: UIViewController {
     
     private lazy var imageView: UIImageView = {
         let imageView = UIImageView(image: viewModel.image)
-        imageView.contentMode = .scaleAspectFit
-        imageView.backgroundColor = .white
+        imageView.contentMode = .scaleAspectFill
+        imageView.backgroundColor = .clear
         imageView.translatesAutoresizingMaskIntoConstraints = false
         return imageView
     }()
@@ -174,7 +174,7 @@ extension PhotoViewController {
         guard let window = UIApplication.shared.windows.filter({ $0.isKeyWindow }).first else { return nil }
         let center = CGPoint(x: window.bounds.midX, y: window.bounds.midY)
         let cropRect = CGRect(x: center.x - cropSize.width / 2,
-                              y: center.y - cropSize.height / 2,
+                              y: center.y - cropSize.height / 2 - 10,
                               width: cropSize.width,
                               height: cropSize.height)
 
@@ -242,6 +242,16 @@ extension PhotoViewController {
         imageView.addGestureRecognizer(pinchGesture)
         imageView.addGestureRecognizer(rotationGesture)
     }
+    
+    private func presentAlert() {
+        let alert = UIAlertController(title: "Successuful save photo",
+                                      message: nil,
+                                      preferredStyle: .alert)
+        
+        alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
+        
+        self.present(alert, animated: true, completion: nil)
+    }
 }
 
 // MARK: - Obj-c methods
@@ -291,6 +301,7 @@ extension PhotoViewController {
             return
         }
         viewModel.apply(.onSaveImage(imageToSave))
+        presentAlert()
     }
 }
 

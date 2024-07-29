@@ -18,6 +18,7 @@ struct MainView<ViewModel>: View where ViewModel: MainViewModelProtocol {
     var body: some View {
         VStack {
             PhotoView(viewModel: viewModel)
+                .ignoresSafeArea()
         }
     }
 }

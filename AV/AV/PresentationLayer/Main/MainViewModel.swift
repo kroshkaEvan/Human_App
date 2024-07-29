@@ -8,6 +8,7 @@
 import SwiftUI
 import Combine
 import UIKit
+import AudioToolbox
 
 enum Load {
     case onAppear
@@ -56,6 +57,8 @@ extension MainViewModel: DataFlowProtocol {
     }
     
     private func saveImageToPhotos(_ image: UIImage) {
+        AudioServicesPlaySystemSound(SystemSoundID(1001))
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         UIImageWriteToSavedPhotosAlbum(image,
                                        self,
                                        nil,
