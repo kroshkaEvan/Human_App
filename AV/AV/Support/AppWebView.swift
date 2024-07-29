@@ -11,7 +11,7 @@ import WebKit
 class WebViewScriptMessageHandler: NSObject, WKScriptMessageHandler {
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         if message.name == "scrollListener", let messageBody = message.body as? String, messageBody == "bottom" {
-            print("Reached bottom of the list")
+            log("Reached bottom of the list")
         }
     }
 }

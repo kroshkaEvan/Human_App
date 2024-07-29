@@ -347,18 +347,20 @@ extension PhotoViewController {
         metalCommandQueue = metalDevice?.makeCommandQueue()
 
         let defaultLibrary = metalDevice?.makeDefaultLibrary()
-        let kernelFunction = defaultLibrary?.makeFunction(name: Constants.KernelName.grayscale)
-        do {
-            metalPipelineState = try metalDevice?.makeComputePipelineState(function: kernelFunction!)
-        } catch {
-            fatalError("Unable to create pipeline state: \(error)")
+        if let kernelFunction = defaultLibrary?.makeFunction(name: Constants.KernelName.grayscale) {
+            do {
+                metalPipelineState = try metalDevice?.makeComputePipelineState(function: kernelFunction)
+            } catch {
+                fatalError("Unable to create pipeline state: \(error)")
+            }
         }
     }
         
     func applyGrayscaleEffect(to image: UIImage) {
         guard let cgImage = image.cgImage,
-              let metalDevice = metalDevice,
-              let metalCommandQueue = metalCommandQueue else { return }
+              let metalDevice,
+              let metalCommandQueue,
+              let metalPipelineState else { return }
 
         let textureLoader = MTKTextureLoader(device: metalDevice)
         
@@ -367,7 +369,7 @@ extension PhotoViewController {
                                                        options: nil)
             let commandBuffer = metalCommandQueue.makeCommandBuffer()
             let commandEncoder = commandBuffer?.makeComputeCommandEncoder()
-            commandEncoder?.setComputePipelineState(metalPipelineState!)
+            commandEncoder?.setComputePipelineState(metalPipelineState)
             commandEncoder?.setTexture(texture, index: 0)
 
             let outputTexture = makeTexture(size: CGSize(width: cgImage.width,
@@ -401,7 +403,10 @@ extension PhotoViewController {
                                                                   mipmapped: false)
         descriptor.usage = [.shaderRead, .shaderWrite]
         
-        return device.makeTexture(descriptor: descriptor)!
+        guard let texture = device.makeTexture(descriptor: descriptor) else {
+            fatalError("Failed to create texture")
+        }
+        return texture
     }
         
     private func updateImageView(with texture: MTLTexture) {
